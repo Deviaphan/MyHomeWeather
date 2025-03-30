@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35919.96
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MyHomeWeather", "MyHomeWeather.vcxproj", "{D98488A7-2161-E651-C15B-6F8B2645DB08}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D98488A7-2161-E651-C15B-6F8B2645DB08}.Debug|x64.ActiveCfg = Debug|x64
+		{D98488A7-2161-E651-C15B-6F8B2645DB08}.Debug|x64.Build.0 = Debug|x64
+		{D98488A7-2161-E651-C15B-6F8B2645DB08}.Release|x64.ActiveCfg = Release|x64
+		{D98488A7-2161-E651-C15B-6F8B2645DB08}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {731F9A0A-0D23-4C8F-9F3E-B6CA0B44CC76}
+	EndGlobalSection
+EndGlobal
