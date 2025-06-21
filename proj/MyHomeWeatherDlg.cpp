@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "MyHomeWeatherDlg.h"
+#include <chrono>
 #include "Resource.h"
+#include <thread>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -12,8 +14,14 @@ enum
 	UPDATE_WEATHER,
 };
 
+void UpdateWeatherAsync( CMyHomeWeatherDlg * dlg )
+{
+	dlg->UpdateWeather();
+}
+
 CMyHomeWeatherDlg::CMyHomeWeatherDlg( CWnd* pParent /*=nullptr*/ )
 	: CDialog( IDD_MYHOMEWEATHER_DIALOG, pParent )
+	, _firstTimerStart(true)
 {
 	m_hIcon = AfxGetApp()->LoadIcon( IDR_MAINFRAME );
 }
@@ -33,6 +41,7 @@ BEGIN_MESSAGE_MAP( CMyHomeWeatherDlg, CDialog )
 	ON_WM_MOUSEMOVE()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
+	ON_WM_RBUTTONUP()
 	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
@@ -57,24 +66,25 @@ BOOL CMyHomeWeatherDlg::OnInitDialog()
 	const int sizeX = ::GetSystemMetrics( SM_CXSIZEFRAME );
 	SetWindowPos( nullptr, sx - sizeX, sy, 690, 340, SWP_FRAMECHANGED | SWP_SHOWWINDOW );
 
-	SYSTEMTIME sysTime = {};
-	::GetLocalTime( &sysTime );
-
-
 	{
 		_weatherWidget.Initialize();
 
 		_weatherWidget.UpdateClock();
 
-		_weatherWidget.UpdateWeather();
-
 		_weatherWidget.Invalidate();
+
+		OnTimer( UPDATE_WEATHER );
 	}
 
+	const auto now = ::std::chrono::system_clock::now();
+	const auto time = std::chrono::system_clock::to_time_t( now );
+	tm timeS;
+	_localtime64_s( &timeS, &time );
 
-	SetTimer( UPDATE_TIME, (60 - sysTime.wSecond + 3) * 1000, nullptr );
+	const int seconds = 60 - timeS.tm_sec + 1;
+	SetTimer( UPDATE_TIME, seconds * 1000, nullptr );
+
 	SetTimer( UPDATE_WEATHER, 10 * 60 * 1000, nullptr );
-
 
 	return TRUE;
 }
@@ -112,6 +122,13 @@ BOOL CMyHomeWeatherDlg::OnEraseBkgnd( CDC* /*pDC*/ )
 	return FALSE;
 }
 
+void CMyHomeWeatherDlg::UpdateWeather()
+{
+	_weatherWidget.UpdateWeather();
+
+	_weatherWidget.Invalidate();
+}
+
 void CMyHomeWeatherDlg::OnTimer( UINT_PTR nIDEvent )
 {
 	try
@@ -134,11 +151,10 @@ void CMyHomeWeatherDlg::OnTimer( UINT_PTR nIDEvent )
 			}
 			case UPDATE_WEATHER:
 			{
-				CWaitCursor waiting;
+				std::thread runUpdate( UpdateWeatherAsync, this );
 
-				_weatherWidget.UpdateWeather();
+				runUpdate.detach();
 
-				_weatherWidget.Invalidate();
 				break;
 			}
 			default:
@@ -190,6 +206,12 @@ void CMyHomeWeatherDlg::OnLButtonUp( UINT nFlags, CPoint point )
 	}
 	CDialog::OnLButtonUp( nFlags, point );
 }
+
+void CMyHomeWeatherDlg::OnRButtonUp( UINT nFlags, CPoint point )
+{
+	OnTimer( UPDATE_WEATHER );
+}
+
 
 void CMyHomeWeatherDlg::OnSize( UINT nType, int cx, int cy )
 {

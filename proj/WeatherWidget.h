@@ -2,6 +2,7 @@
 #include <afxwin.h>
 #include <string>
 #include <map>
+#include <mutex>
 
 class WeatherWidget: public CStatic
 {
@@ -20,6 +21,8 @@ protected:
 
 	void DrawClock( HDC hdc );
 	void DrawWeather( HDC hdc );
+
+	void ReloadWeatherIcon();
 
 public:
 	void Initialize();
@@ -50,10 +53,16 @@ private:
 	CString _lastFolder;
 	CFont _weatherFont;
 
+	CFont _smallFont;
+
+
 	std::map<int, std::string> _icons;
 
 	::std::string _latitude;
 	::std::string _longitude;
 	::std::string _appid;
+
+	std::mutex _mutexDraw;
+	std::mutex _mutexUpdate;
 };
 

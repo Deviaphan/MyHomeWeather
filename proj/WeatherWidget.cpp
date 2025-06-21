@@ -11,7 +11,7 @@ const CString dayName[7] = { L"Воскресение", L"Понедельник
 const CString monthName[12] = { L"Январь", L"Февраль", L"Март", L"Апрель", L"Май", L"Июнь", L"Июль", L"Август", L"Сентябрь", L"Октябрь", L"Ноябрь", L"Декабрь", };
 
 
-void PremulAlpha( CImage & img )
+void PremulAlpha( CImage& img )
 {
 	if( img.IsNull() )
 		return;
@@ -19,7 +19,7 @@ void PremulAlpha( CImage & img )
 	if( img.GetBPP() != 32 )
 		return;
 
-	unsigned char * bits = static_cast<unsigned char*>(img.GetBits());
+	unsigned char* bits = static_cast<unsigned char*>(img.GetBits());
 	const int pitch = img.GetPitch();
 
 	const int width = img.GetWidth();
@@ -27,8 +27,8 @@ void PremulAlpha( CImage & img )
 
 	for( int y = 0; y < height; ++y )
 	{
-		unsigned int * pixel = reinterpret_cast<unsigned*>(bits);
-		unsigned int * end = pixel + width;
+		unsigned int* pixel = reinterpret_cast<unsigned*>( bits );
+		unsigned int* end = pixel + width;
 
 		for( ; pixel < end; ++pixel )
 		{
@@ -161,15 +161,19 @@ void WeatherWidget::Initialize()
 	logFont.lfHeight = -80;
 	_weatherFont.CreateFontIndirectW( &logFont );
 
+	logFont.lfHeight = -16;
+	_smallFont.CreateFontIndirectW( &logFont );
+
+
 	std::ifstream iFile( "icons/icons.json" );
 	Json::Value root;
 	Json::Reader reader;
-	reader.parse(iFile, root, false);
+	reader.parse( iFile, root, false );
 	const auto members = root.getMemberNames();
 
-	for( const auto & ii : members )
+	for( const auto& ii : members )
 	{
-		const Json::Value & object = root[ii];
+		const Json::Value& object = root[ii];
 		int iconId = 0;
 		try
 		{
@@ -187,6 +191,8 @@ void WeatherWidget::OnPaint()
 {
 	try
 	{
+		::std::lock_guard lock( _mutexDraw );
+
 		CPaintDC pdc( this );
 		CRect r;
 		GetClientRect( r );
@@ -219,7 +225,7 @@ void WeatherWidget::OnPaint()
 	}
 }
 
-BOOL WeatherWidget::OnEraseBkgnd( CDC * /*pDC*/ )
+BOOL WeatherWidget::OnEraseBkgnd( CDC* /*pDC*/ )
 {
 	return FALSE;
 }
@@ -267,7 +273,8 @@ void WeatherWidget::DrawWeather( HDC hdc )
 	if( !_weatherIcon.IsNull() )
 	{
 		_weatherIcon.AlphaBlend( hdc, 418, 0 );
-
+	}
+	{
 		//CPen pen( PS_SOLID, 1, RGB(255,0,0) );
 		//::SelectObject( hdc, pen );
 		//::MoveToEx( hdc, 418, 0, 0 );
@@ -283,12 +290,12 @@ void WeatherWidget::DrawWeather( HDC hdc )
 		CFont wFont;
 		wFont.CreateFontIndirectW( &logFont );
 
-		static const CSize offsets[5] = {{-3, -3}, {-3, 3}, {3, -3}, {3, 3}, {0, 0}};
-		constexpr COLORREF fontColor[5] = {RGB( 0, 0, 0 ), RGB( 0, 0, 0 ), RGB( 0, 0, 0 ), RGB( 0, 0, 0 ), RGB( 230, 235, 235 )};
+		static const CSize offsets[5] = { { -3, -3 }, { -3, 3 }, { 3, -3 }, { 3, 3 }, { 0, 0 } };
+		constexpr COLORREF fontColor[5] = { RGB( 0, 0, 0 ), RGB( 0, 0, 0 ), RGB( 0, 0, 0 ), RGB( 0, 0, 0 ), RGB( 230, 235, 235 ) };
 
 		HGDIOBJ oldFont = ::SelectObject( hdc, wFont );
 
-		CRect titleRect(0,0,0,0);// (270, 230, 600, 400);
+		CRect titleRect( 0, 0, 0, 0 );// (270, 230, 600, 400);
 		constexpr int posX = 270;
 		constexpr int width = 380;
 
@@ -310,7 +317,7 @@ void WeatherWidget::DrawWeather( HDC hdc )
 		{
 			::SetTextColor( hdc, fontColor[i] );
 
-			::DrawText( hdc, _weatherTitle, _weatherTitle.GetLength(), CRect( posX+offsets[i].cx, 230 + offsets[i].cy, posX + width + offsets[i].cx, 295 + offsets[i].cy ), DT_SINGLELINE | DT_RIGHT | DT_VCENTER | DT_NOCLIP );
+			::DrawText( hdc, _weatherTitle, _weatherTitle.GetLength(), CRect( posX + offsets[i].cx, 230 + offsets[i].cy, posX + width + offsets[i].cx, 295 + offsets[i].cy ), DT_SINGLELINE | DT_RIGHT | DT_VCENTER | DT_NOCLIP );
 		}
 		::SelectObject( hdc, oldFont );
 
@@ -322,6 +329,16 @@ void WeatherWidget::DrawWeather( HDC hdc )
 			::DrawText( hdc, _weatherC, _weatherC.GetLength(), CRect( offsets[i].cx, 230 + offsets[i].cy, 250 + offsets[i].cx, 310 + offsets[i].cy ), DT_SINGLELINE | DT_RIGHT | DT_VCENTER | DT_NOCLIP );
 		}
 		::SelectObject( hdc, oldFont );
+
+		{
+			CString icon;
+			icon.Format( L"%i", _iconId );
+
+			oldFont = ::SelectObject( hdc, _smallFont );
+			::SetTextColor( hdc, RGB( 0, 0, 0 ) );
+			::DrawText( hdc, icon, icon.GetLength(), CRect( 8, 8, 80, 20 ), DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOCLIP );
+			::SelectObject( hdc, oldFont );
+		}
 	}
 }
 
@@ -352,13 +369,15 @@ void WeatherWidget::UpdateWeather()
 {
 	try
 	{
+		::std::lock_guard lock( _mutexUpdate );
+
 		CStringA curlQuery;
 		curlQuery.Format( "http://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&appid=%s&lang=ru&units=metric",
 			_latitude.c_str(),
 			_longitude.c_str(),
 			_appid.c_str() );
 
-		Curl curl( 30, false );
+		Curl curl( 10, false );
 
 		CurlBuffer chunk;
 
@@ -368,11 +387,11 @@ void WeatherWidget::UpdateWeather()
 
 		const CURLcode result = curl_easy_perform( curl );
 		if( CURLE_OK != result )
-			return;
+			throw (int)-1;
 
 		chunk.TerminateBuffer();
 
-		const char * json = static_cast<const char*>(chunk.GetData());
+		const char* json = static_cast<const char*>(chunk.GetData());
 
 		Json::Value root;
 		Json::Reader reader;
@@ -381,13 +400,13 @@ void WeatherWidget::UpdateWeather()
 		{
 			const Json::Value& weather = root["weather"];
 			if( !weather.isArray() )
-				return;
+				throw (int)-1;
 			if( weather.empty() )
-				return;
+				throw (int)-1;
 
 			const Json::Value& object = weather[0];
 			if( !object.isObject() )
-				return;
+				throw (int)-1;
 
 			_iconId = ReadInt( object, "id", 0 );
 			_iconName = Utf8Unicode( ReadString( object, "icon", "unknown" ) );
@@ -397,7 +416,7 @@ void WeatherWidget::UpdateWeather()
 		{
 			const Json::Value& main = root["main"];
 			if( !main.isObject() )
-				return;
+				throw (int)-1;
 
 			_temperature = (float)ReadDouble( main, "temp", 0.0 );
 
@@ -405,6 +424,26 @@ void WeatherWidget::UpdateWeather()
 			//_humidity = ReadInt( root, "relativeHumidity", 0 );
 		}
 
+		ReloadWeatherIcon();
+
+		_weatherC.Format( L"%.1f°", _temperature );
+	}
+	catch( ... )
+	{
+		_weatherTitle = L"ошибка получения данных";
+		_weatherC = L":(";
+
+		_iconName = L"night";
+		_iconId = 701;
+
+		ReloadWeatherIcon();
+	}
+}
+
+void WeatherWidget::ReloadWeatherIcon()
+{
+	try
+	{
 		CString folder = L"day";
 		if( _iconName.Find( L"n" ) > 0 )
 			folder = L"night";
@@ -425,7 +464,7 @@ void WeatherWidget::UpdateWeather()
 				VERIFY( GetModuleFileName( thisModule, workPath, MAX_PATH ) );
 				VERIFY( PathRemoveFileSpec( workPath ) );
 			}
-			
+
 			CString fileName = L"clear_sky";
 			auto ii = _icons.find( _iconId );
 			if( ii != _icons.end() )
@@ -445,11 +484,9 @@ void WeatherWidget::UpdateWeather()
 				PremulAlpha( _weatherIcon );
 			}
 		}
-
-		_weatherC.Format( L"%.1f°", _temperature );
 	}
 	catch( ... )
 	{
-
 	}
 }
+

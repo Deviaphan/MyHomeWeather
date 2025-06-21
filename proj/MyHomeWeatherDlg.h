@@ -11,9 +11,12 @@ public:
 	enum { IDD = IDD_MYHOMEWEATHER_DIALOG };
 #endif
 
+	void UpdateWeather();
+
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);
 	virtual BOOL OnInitDialog();
+
 
 	DECLARE_MESSAGE_MAP()
 	afx_msg void OnDestroy();
@@ -25,6 +28,7 @@ protected:
 	afx_msg void OnMouseMove( UINT nFlags, CPoint point );
 	afx_msg void OnLButtonUp( UINT nFlags, CPoint point );
 	afx_msg void OnSize( UINT nType, int cx, int cy );
+	afx_msg void OnRButtonUp( UINT nFlags, CPoint point );
 
 // Implementation
 protected:
